@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from logging import Logger
 from typing import Any, Iterable
 
@@ -27,6 +28,8 @@ from sqlalchemy.sql.expression import bindparam
 import jq
 from target_clickhouse.semantic_events_jq import semantic_events_jq_expression
 from target_clickhouse.connectors import ClickhouseConnector
+from target_clickhouse.utils.ch_df_utils import flatten_nested_fields, remove_all_empty_columns, \
+    replace_none_where_needed
 from target_clickhouse.utils.json_utils import json_serialize
 from target_clickhouse.utils.persistence import get_clickhouse_connection
 
@@ -104,9 +107,17 @@ class ClickhouseSink(SQLSink):
             database=self.config.get("database")
         )
 
-        df = pd.DataFrame.from_records(records_transformed[0])
-        client.insert_df(df=df, table=f"{self.config.get('database')}.{self.config.get('table_name')}")
-        return df.shape[0]
+        metadata, items = flatten_nested_fields(client=client, items=records_transformed[0])
+
+        df = pd.DataFrame(items)
+        df["entity_gid"] = df["entity_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
+        df["event_gid"] = df["event_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
+
+        df = remove_all_empty_columns(dataframe=df)
+        df = replace_none_where_needed(metadata=metadata, dataframe=df)
+        rows = client.insert_df(df=df, table=f"{self.config.get('database')}.{self.config.get('table_name')}")
+        written_rows = int(rows.summary["written_rows"])
+        return written_rows
 
     def activate_version(self, new_version: int) -> None:
         """Bump the active version of the target table.
