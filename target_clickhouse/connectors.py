@@ -43,7 +43,6 @@ class ClickhouseConnector(SQLConnector):
             config: The configuration for the connector.
 
         """
-        self.logger.info("config: %s", config)
         if config.get("sqlalchemy_url"):
             return super().get_sqlalchemy_url(config)
 

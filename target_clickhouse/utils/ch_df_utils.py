@@ -207,7 +207,7 @@ def replace_none_where_needed(metadata, dataframe: pd.DataFrame) -> pd.DataFrame
                 )
             elif column_meta["basic_type"] in ["Float"]:
                 dataframe[column] = dataframe[column].apply(
-                    lambda x: [y if isinstance(y, float) else np.nan for y in x]
+                    lambda x: [y if isinstance(y, float) else float(y) if y else np.nan for y in x]
                 )
             elif column_meta["basic_type"] in ["UUID"]:
                 dataframe[column] = dataframe[column].apply(

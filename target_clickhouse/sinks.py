@@ -92,12 +92,11 @@ class ClickhouseSink(SQLSink):
         # Usage
         df_json_serialized = json_serialize(df_json)
         records_serializable = json.loads(df_json_serialized)
-        self.logger.info("records_serializable: %s", json.dumps(records_serializable))
 
         jq_expression = semantic_events_jq_expression()
 
         records_transformed = jq.compile(jq_expression).input_value(records_serializable).all()
-        self.logger.info("records_transformed: %s", records_transformed)
+        self.logger.info("records_transformed")
 
         client = get_clickhouse_connection(
             host=self.config.get("host"),

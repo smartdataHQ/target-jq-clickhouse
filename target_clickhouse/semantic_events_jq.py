@@ -5,7 +5,7 @@ def semantic_events_jq_expression() -> str:
   entity_gid: ("https://shopify.com/orders"),
   type: ("track" | tostring),
   event: ("order_purchased" | tostring), 
-  timestamp: (.customer__created_at),
+  timestamp: (.customer__updated_at),
 
   location: [{
     "location_of": "shipping_address",
