@@ -1,0 +1,27 @@
+{
+  'properties': {
+    'question_posed': {
+      'description': 'The question or issue you need more information on',
+      'title': 'Question Posed',
+      'type': 'string'
+    },
+    'context': {
+      'anyOf': [
+        {
+          'type': 'string'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'default': None,
+      'description': 'Additional information on the context of the question in the conversation',
+      'title': 'Context'
+    }
+  },
+  'required': [
+    'question_posed'
+  ],
+  'title': 'DocumentInputModel',
+  'type': 'object'
+}

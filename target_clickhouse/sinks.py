@@ -108,7 +108,15 @@ class ClickhouseSink(SQLSink):
 
         metadata, items = flatten_nested_fields(client=client, items=records_transformed[0])
 
-        df = pd.DataFrame(items)
+        validated_records = []
+        for rec in items:
+            try:
+                validated = EventRecord(**rec)              # instantiate model (validates)
+                validated_records.append(validated.model_dump(exclude_none=True))  
+            except ValidationError as e:
+                self.logger.error(f"Pydantic validation failed: {e}")
+                continue
+        df = pd.DataFrame(validated_records)
         df["entity_gid"] = df["entity_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
         df["event_gid"] = df["event_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
 
