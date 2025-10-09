@@ -12,12 +12,15 @@ license = "Apache-2.0"
 packages = [
     { include = "target_clickhouse" },
     { include = "cxs" },
-    { include = "core" }
-
 ]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
+pydantic = ">=2.6,<3"      # already added earlier
+unidecode = ">=1.3,<2.0"   # already added earlier
+jinja2 = ">=3.1,<4.0"      # NEW
+deepmerge = ">=1.1.1,<2.0"
+markdownify = ">=0.13,<1.0" 
 singer-sdk = { version=">=0.28,<0.39" }
 jq = "1.10.0"
 pandas = "2.3.2"
