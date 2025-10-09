@@ -1,0 +1,178 @@
+from enum import Enum
+from typing import Any, Annotated,  Optional
+from pydantic import Field
+from cxs.core.schema import CXSBase, OmitIfNone, empty_list, empty_dict
+
+
+class Sentiment(Enum):
+    extremely_positive = "Extremely Positive"
+    very_positive = "Very Positive"
+    positive = "Positive"
+    neutral = "Neutral"
+    negative = "Negative"
+    very_negative = "Very Negative"
+    extremely_negative = "Extremely Negative"
+
+class EntityType(Enum):
+    person = "Person"
+    equipment = "Equipment"
+    service = "Service"
+    company = "Company"
+    conditions = "Conditions"
+
+class InterestLevel(Enum):
+    neutral = "Neutral"
+    low = "Low"
+    medium = "Medium"
+    high = "High"
+    negative = "Negative"
+    very_negative = "Very Negative"
+
+class ConversationalFlagsType(Enum):
+    red = "Red"
+    yellow = "Yellow"
+    green = "Green"
+
+class TargetTypes(Enum):
+    customer = "Customer"
+    spouse = "Spouse"
+    child = "Child"
+    parent = "Parent"
+    grandparent = "Grandparent"
+    grandchild = "Grandchild"
+    sibling = "Sibling"
+    friend = "Friend"
+    colleague = "Colleague"
+    boss = "Boss"
+    employee = "Employee"
+    other = "Other"
+
+class OccasionCategory(Enum):
+    anniversary = "Anniversary"
+    birthday = "Birthday"
+    christmas = "Christmas"
+    easter = "Easter"
+    graduation = "Graduation"
+    halloween = "Halloween"
+    mothers_day = "Mother's Day"
+    fathers_day = "Father's Day"
+    valentines_day = "Valentine's Day"
+    wedding = "Wedding"
+    black_friday = "Black Friday"
+    cyber_monday = "Cyber Monday"
+    back_to_school = "Back to School"
+    new_year = "New Year"
+    thanksgiving = "Thanksgiving"
+    newborn = "Newborn"
+    housewarming = "Housewarming"
+    engagement = "Engagement"
+    retirement = "Retirement"
+    promotion = "Promotion"
+    new_job = "New Job"
+    moving = "Moving"
+    vacation = "Vacation"
+    holiday = "Holiday"
+    religious = "Religious"
+    sports_tournament = "Sports Tournament"
+    concert = "Concert"
+    festival = "Festival"
+    party = "Party"
+    date = "Date"
+    other = "Other"
+
+class InterestedInCategory(Enum):
+    activity = "Activity"
+    sports = "Sports"
+    music = "Music"
+    movie = "Movie"
+    book = "Book"
+    game = "Game"
+    food = "Food"
+    drink = "Drink"
+    hobby = "Hobby"
+    event = "Event"
+    device_type = "Device Type"
+    service = "Service"
+    brand = "Brand"
+    product = "Product"
+    other = "Other"
+
+class EntitySentiment(CXSBase):
+    entity_type: EntityType = Field(description="The target type of the sentiment being detected")
+    entity: str = Field(description="The name or id of a named entity")
+    sentiment: Sentiment = Field(description="The sentiment of the entity")
+    reasoning: Annotated[Optional[str],OmitIfNone()] = Field(description="A brief reasoning behind the sentiment being detected")
+
+class CustomerInterest(CXSBase):
+    interest_in_category: Annotated[Optional[InterestedInCategory],OmitIfNone()] = Field(description="The category of the thing that the customer is interested in")
+    interest_in: Annotated[Optional[str],OmitIfNone()] = Field(description="The name of the thing that the customer is interested in. Keep it to one capitalized word when possible")
+    interest_level: InterestLevel = Field(description="The level of interest in the product")
+    reasoning: Annotated[Optional[str],OmitIfNone()] = Field(description="A brief reasoning behind the interest level being detected")
+
+class ProductRecommendation(CXSBase):
+    sku: str = Field(description="A unique product identifier if available")
+    order: Annotated[Optional[int], OmitIfNone()] = Field(description="The order of the recommendation in the list")
+    reasoning: Annotated[Optional[str], OmitIfNone()] = Field(description="A brief reasoning behind the recommendation")
+
+class ProductInScope(CXSBase):
+    sku: str = Field(description="A unique product identifier if available")
+
+class ProductInterest(CXSBase):
+    sku: Annotated[Optional[str],OmitIfNone()] = Field(description="A unique product identifier if available")
+    brand: Annotated[Optional[str],OmitIfNone()] = Field(description="The brand of the product")
+    product_type: Annotated[Optional[str],OmitIfNone()] = Field(description="The core type of the product")
+    product_line: Annotated[Optional[str],OmitIfNone()] = Field(description="The product line")
+    product_variant: Annotated[Optional[str],OmitIfNone()] = Field(description="The product variant")
+    version_year: Annotated[Optional[str],OmitIfNone()] = Field(description="The year of the product version")
+    interest_level: InterestLevel = Field(description="The level of interest in the product")
+    reasoning: Annotated[Optional[str],OmitIfNone()] = Field(description="A brief reasoning behind the interest level being detected")
+
+class CustomerOccasion(CXSBase):
+    category: OccasionCategory = Field(description="The category of the occasion being detected")
+    occasion: Annotated[Optional[str],OmitIfNone()] = Field(description="A more specific label for the occasion")
+    target: TargetTypes = Field(description="Proper name or label of the main occasion entity")
+    year_month_day: Annotated[Optional[str],OmitIfNone()] = Field(description="The date of the occasion in a complete or partial ISO 8601 format")
+    reasoning: Annotated[Optional[str],OmitIfNone()] = Field(description="A brief reasoning behind the occasion being detected")
+
+class PersonalDetails(CXSBase):
+    target: TargetTypes = Field(description="The target of the personal details")
+    first_name: Annotated[Optional[str],OmitIfNone()] = Field(description="The first name of the customer")
+    last_name: Annotated[Optional[str],OmitIfNone()] = Field(description="The last name of the customer")
+    nickname: Annotated[Optional[str],OmitIfNone()] = Field(description="The last name of the customer")
+    emails: Annotated[Optional[list[str]],OmitIfNone()] = Field(description="The email address of the customer")
+    phone_number: Annotated[Optional[str],OmitIfNone()] = Field(description="The phone number of the customer")
+    address: Annotated[Optional[str],OmitIfNone()] = Field(description="The address of the customer")
+    city: Annotated[Optional[str],OmitIfNone()] = Field(description="The city of the customer")
+    state: Annotated[Optional[str],OmitIfNone()] = Field(description="The state of the customer")
+    country: Annotated[Optional[str],OmitIfNone()] = Field(description="The country of the customer")
+    nationality: Annotated[Optional[str],OmitIfNone()] = Field(description="The nationality of the customer")
+    postal_code: Annotated[Optional[str],OmitIfNone()] = Field(description="The postal code of the customer")
+    gender: Annotated[Optional[str],OmitIfNone()] = Field(description="the gender of the customer")
+    age: Annotated[Optional[int],OmitIfNone()] = Field(description="The age of the customer")
+    birthday: Annotated[Optional[str],OmitIfNone()] = Field(description="The birthday of the customer in a complete or partial ISO 8601 format")
+    occupation: Annotated[Optional[str],OmitIfNone()] = Field(description="The occupation of the customer")
+    marital_status: Annotated[Optional[str],OmitIfNone()] = Field(description="The marital status of the customer")
+    children:  Annotated[Optional[int],OmitIfNone()] = Field(description="The number of children the customer has")
+    annual_income: Annotated[Optional[int],OmitIfNone()] = Field(description="The annual income of the customer")
+    education: Annotated[Optional[str],OmitIfNone()] = Field(description="The highest level of education completed")
+
+class ConversationalFlags(CXSBase):
+    flag_type: ConversationalFlagsType = Field(description="The type of flag being detected")
+    reasoning: Annotated[Optional[str],OmitIfNone()] = Field(description="A brief reasoning behind the flag being set")
+    quote: Annotated[Optional[str],OmitIfNone()] = Field(description="The quote that triggered the flag")
+
+class ConversationContext(CXSBase):
+    focus_product: Annotated[Optional[ProductInScope],OmitIfNone()] = Field(description="The product sku for the most relevant product, if one has been search.")
+    products_in_scope: Annotated[Optional[list[ProductInScope]],OmitIfNone()] = Field(description="The SUKs of all the products that you mention in your latest message.")
+    product_interests: Annotated[Optional[list[ProductInterest]],OmitIfNone()] = Field(description="The products that the customer has shown special/explicit interest in.")
+    product_searches: Annotated[Optional[list[dict[str, Any]]],OmitIfNone()] = Field(description="All product searches made for the user")
+    last_product_search: Annotated[Optional[dict[str, Any]],OmitIfNone()] = Field(description="The last product search made for the user")
+    product_recommendations: Annotated[Optional[list[ProductRecommendation]],OmitIfNone()] = Field(description="The last product search made for the user")
+    interests: Annotated[Optional[list[CustomerInterest]],OmitIfNone()] = Field(description="The interest expressed in the conversation")
+    entity_sentiment: Annotated[Optional[list[EntitySentiment]],OmitIfNone()] = Field(description="The sentiment expressed towards named entities in the conversation")
+    occasions: Annotated[Optional[list[CustomerOccasion]],OmitIfNone()] = Field(description="The occasions described in the conversation")
+    personal_details: Annotated[Optional[list[PersonalDetails]],OmitIfNone()] = Field(description="The personal details volunteered in the conversation")
+    flags: Annotated[Optional[list[ConversationalFlags]],OmitIfNone()] = Field(description="The flags raised during the conversation")
+
+    __pydantic_extra__ = "allow"
+
