@@ -32,6 +32,7 @@ from target_clickhouse.utils.ch_df_utils import flatten_nested_fields, remove_al
     replace_none_where_needed
 from target_clickhouse.utils.json_utils import json_serialize
 from target_clickhouse.utils.persistence import get_clickhouse_connection
+
 from cxs.core.schema.semantic_event import SemanticEvent
 
 

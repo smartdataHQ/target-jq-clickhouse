@@ -11,7 +11,9 @@ keywords = [
 license = "Apache-2.0"
 packages = [
     { include = "target_clickhouse" },
-     { include = "cxs" }
+    { include = "cxs" },
+    { include = "core" }
+
 ]
 
 [tool.poetry.dependencies]
