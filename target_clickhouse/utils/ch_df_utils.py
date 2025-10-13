@@ -224,7 +224,7 @@ def replace_none_where_needed(metadata, dataframe: pd.DataFrame) -> pd.DataFrame
 
 
 def flatten_nested_fields(client, items):
-    metadata = fetch_metadata(client, "mydb.orders")
+    metadata = fetch_metadata(client, "dev.semantic_events_dev")
     nested = metadata["nested"]
 
     for item in items:
