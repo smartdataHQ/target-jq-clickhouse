@@ -39,6 +39,79 @@ from cxs.core.schema.semantic_event import SemanticEvent
 class ClickhouseSink(SQLSink):
     """clickhouse target sink class."""
 
+    def _transform_with_jq_and_validate_with_pydantic(
+        self,
+        records_serializable: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        jq_expression = semantic_events_jq_expression()
+        self.logger.info("JQ: compiling and transforming %d input records", len(records_serializable))
+        try:
+            jq_out = jq.compile(jq_expression).input_value(records_serializable).all()
+        except Exception as ex:
+            self.logger.exception("JQ transform failed: %s", ex)
+            raise
+
+        events: List[Dict[str, Any]] = jq_out[0] if jq_out else []
+        self.logger.info("JQ: produced %d semantic event(s)", len(events))
+
+        validated: List[Dict[str, Any]] = []
+        dropped_count = 0
+
+        for idx, ev in enumerate(events):
+            try:
+                pretty_raw = _json.dumps(ev, indent=2, sort_keys=True, default=str)
+            except Exception:
+                pretty_raw = str(ev)
+            self.logger.info("Pydantic[%d] RAW event:\n%s", idx, pretty_raw)
+
+            ev_norm = dict(ev)  # shallow copy
+            for key in ("entity_gid", "event_gid"):
+                val = ev_norm.get(key)
+                if val is None:
+                    continue
+                if isinstance(val, uuid.UUID):
+                    continue
+                try:
+                    ev_norm[key] = uuid.UUID(str(val))
+                except Exception:
+                    ev_norm[key] = uuid.uuid5(uuid.NAMESPACE_URL, str(val))
+
+            try:
+                model = SemanticEventCH.model_validate(ev_norm)
+                dumped = model.model_dump(mode="python")
+            except Exception as ex:
+                self.logger.error(
+                    "Pydantic[%d] VALIDATION ERROR: %r\nPayload (normalized) was:\n%s",
+                    idx,
+                    ex,
+                    _json.dumps(ev_norm, indent=2, sort_keys=True, default=str),
+                )
+                dropped_count += 1
+                continue
+
+            try:
+                pretty_valid = _json.dumps(dumped, indent=2, sort_keys=True, default=str)
+            except Exception:
+                pretty_valid = str(dumped)
+            self.logger.info("Pydantic[%d] VALIDATED event:\n%s", idx, pretty_valid)
+
+            raw_keys = set(ev_norm.keys())
+            validated_keys = set(dumped.keys())
+
+            dropped_keys = sorted(raw_keys - validated_keys)
+            if dropped_keys:
+                self.logger.info("Pydantic[%d] DROPPED top-level keys: %s", idx, ", ".join(dropped_keys))
+
+            validated.append(dumped)
+
+        self.logger.info(
+            "Pydantic: validated %d/%d event(s); dropped %d invalid",
+            len(validated),
+            len(events),
+            dropped_count,
+        )
+        return validated
+
     connector_class = ClickhouseConnector
 
     @property
@@ -109,6 +182,8 @@ class ClickhouseSink(SQLSink):
         )
 
         metadata, items = flatten_nested_fields(client=client, items=records_transformed[0])
+        validated_events = self._transform_with_jq_and_validate_with_pydantic(records_serializable)
+        metadata, items = flatten_nested_fields(client=client, items=validated_events)
 
         df = pd.DataFrame(items)
         df["entity_gid"] = df["entity_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
