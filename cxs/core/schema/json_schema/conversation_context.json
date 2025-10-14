@@ -1,0 +1,905 @@
+{
+  '$defs': {
+    'ConversationalFlags': {
+      'properties': {
+        'flag_type': {
+          '$ref': '#/$defs/ConversationalFlagsType',
+          'description': 'The type of flag being detected'
+        },
+        'reasoning': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A brief reasoning behind the flag being set',
+          'title': 'Reasoning'
+        },
+        'quote': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The quote that triggered the flag',
+          'title': 'Quote'
+        }
+      },
+      'required': [
+        'flag_type',
+        'reasoning',
+        'quote'
+      ],
+      'title': 'ConversationalFlags',
+      'type': 'object'
+    },
+    'ConversationalFlagsType': {
+      'enum': [
+        'Red',
+        'Yellow',
+        'Green'
+      ],
+      'title': 'ConversationalFlagsType',
+      'type': 'string'
+    },
+    'CustomerInterest': {
+      'properties': {
+        'interest_in_category': {
+          'anyOf': [
+            {
+              '$ref': '#/$defs/InterestedInCategory'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The category of the thing that the customer is interested in'
+        },
+        'interest_in': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The name of the thing that the customer is interested in. Keep it to one capitalized word when possible',
+          'title': 'Interest In'
+        },
+        'interest_level': {
+          '$ref': '#/$defs/InterestLevel',
+          'description': 'The level of interest in the product'
+        },
+        'reasoning': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A brief reasoning behind the interest level being detected',
+          'title': 'Reasoning'
+        }
+      },
+      'required': [
+        'interest_in_category',
+        'interest_in',
+        'interest_level',
+        'reasoning'
+      ],
+      'title': 'CustomerInterest',
+      'type': 'object'
+    },
+    'CustomerOccasion': {
+      'properties': {
+        'category': {
+          '$ref': '#/$defs/OccasionCategory',
+          'description': 'The category of the occasion being detected'
+        },
+        'occasion': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A more specific label for the occasion',
+          'title': 'Occasion'
+        },
+        'target': {
+          '$ref': '#/$defs/TargetTypes',
+          'description': 'Proper name or label of the main occasion entity'
+        },
+        'year_month_day': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The date of the occasion in a complete or partial ISO 8601 format',
+          'title': 'Year Month Day'
+        },
+        'reasoning': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A brief reasoning behind the occasion being detected',
+          'title': 'Reasoning'
+        }
+      },
+      'required': [
+        'category',
+        'occasion',
+        'target',
+        'year_month_day',
+        'reasoning'
+      ],
+      'title': 'CustomerOccasion',
+      'type': 'object'
+    },
+    'EntitySentiment': {
+      'properties': {
+        'entity_type': {
+          '$ref': '#/$defs/EntityType',
+          'description': 'The target type of the sentiment being detected'
+        },
+        'entity': {
+          'description': 'The name or id of a named entity',
+          'title': 'Entity',
+          'type': 'string'
+        },
+        'sentiment': {
+          '$ref': '#/$defs/Sentiment',
+          'description': 'The sentiment of the entity'
+        },
+        'reasoning': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A brief reasoning behind the sentiment being detected',
+          'title': 'Reasoning'
+        }
+      },
+      'required': [
+        'entity_type',
+        'entity',
+        'sentiment',
+        'reasoning'
+      ],
+      'title': 'EntitySentiment',
+      'type': 'object'
+    },
+    'EntityType': {
+      'enum': [
+        'Person',
+        'Equipment',
+        'Service',
+        'Company',
+        'Conditions'
+      ],
+      'title': 'EntityType',
+      'type': 'string'
+    },
+    'InterestLevel': {
+      'enum': [
+        'Neutral',
+        'Low',
+        'Medium',
+        'High',
+        'Negative',
+        'Very Negative'
+      ],
+      'title': 'InterestLevel',
+      'type': 'string'
+    },
+    'InterestedInCategory': {
+      'enum': [
+        'Activity',
+        'Sports',
+        'Music',
+        'Movie',
+        'Book',
+        'Game',
+        'Food',
+        'Drink',
+        'Hobby',
+        'Event',
+        'Device Type',
+        'Service',
+        'Brand',
+        'Product',
+        'Other'
+      ],
+      'title': 'InterestedInCategory',
+      'type': 'string'
+    },
+    'OccasionCategory': {
+      'enum': [
+        'Anniversary',
+        'Birthday',
+        'Christmas',
+        'Easter',
+        'Graduation',
+        'Halloween',
+        "Mother's Day",
+        "Father's Day",
+        "Valentine's Day",
+        'Wedding',
+        'Black Friday',
+        'Cyber Monday',
+        'Back to School',
+        'New Year',
+        'Thanksgiving',
+        'Newborn',
+        'Housewarming',
+        'Engagement',
+        'Retirement',
+        'Promotion',
+        'New Job',
+        'Moving',
+        'Vacation',
+        'Holiday',
+        'Religious',
+        'Sports Tournament',
+        'Concert',
+        'Festival',
+        'Party',
+        'Date',
+        'Other'
+      ],
+      'title': 'OccasionCategory',
+      'type': 'string'
+    },
+    'PersonalDetails': {
+      'properties': {
+        'target': {
+          '$ref': '#/$defs/TargetTypes',
+          'description': 'The target of the personal details'
+        },
+        'first_name': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The first name of the customer',
+          'title': 'First Name'
+        },
+        'last_name': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The last name of the customer',
+          'title': 'Last Name'
+        },
+        'nickname': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The last name of the customer',
+          'title': 'Nickname'
+        },
+        'emails': {
+          'anyOf': [
+            {
+              'items': {
+                'type': 'string'
+              },
+              'type': 'array'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The email address of the customer',
+          'title': 'Emails'
+        },
+        'phone_number': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The phone number of the customer',
+          'title': 'Phone Number'
+        },
+        'address': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The address of the customer',
+          'title': 'Address'
+        },
+        'city': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The city of the customer',
+          'title': 'City'
+        },
+        'state': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The state of the customer',
+          'title': 'State'
+        },
+        'country': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The country of the customer',
+          'title': 'Country'
+        },
+        'nationality': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The nationality of the customer',
+          'title': 'Nationality'
+        },
+        'postal_code': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The postal code of the customer',
+          'title': 'Postal Code'
+        },
+        'gender': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'the gender of the customer',
+          'title': 'Gender'
+        },
+        'age': {
+          'anyOf': [
+            {
+              'type': 'integer'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The age of the customer',
+          'title': 'Age'
+        },
+        'birthday': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The birthday of the customer in a complete or partial ISO 8601 format',
+          'title': 'Birthday'
+        },
+        'occupation': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The occupation of the customer',
+          'title': 'Occupation'
+        },
+        'marital_status': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The marital status of the customer',
+          'title': 'Marital Status'
+        },
+        'children': {
+          'anyOf': [
+            {
+              'type': 'integer'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The number of children the customer has',
+          'title': 'Children'
+        },
+        'annual_income': {
+          'anyOf': [
+            {
+              'type': 'integer'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The annual income of the customer',
+          'title': 'Annual Income'
+        },
+        'education': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The highest level of education completed',
+          'title': 'Education'
+        }
+      },
+      'required': [
+        'target',
+        'first_name',
+        'last_name',
+        'nickname',
+        'emails',
+        'phone_number',
+        'address',
+        'city',
+        'state',
+        'country',
+        'nationality',
+        'postal_code',
+        'gender',
+        'age',
+        'birthday',
+        'occupation',
+        'marital_status',
+        'children',
+        'annual_income',
+        'education'
+      ],
+      'title': 'PersonalDetails',
+      'type': 'object'
+    },
+    'ProductInScope': {
+      'properties': {
+        'sku': {
+          'description': 'A unique product identifier if available',
+          'title': 'Sku',
+          'type': 'string'
+        }
+      },
+      'required': [
+        'sku'
+      ],
+      'title': 'ProductInScope',
+      'type': 'object'
+    },
+    'ProductInterest': {
+      'properties': {
+        'sku': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A unique product identifier if available',
+          'title': 'Sku'
+        },
+        'brand': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The brand of the product',
+          'title': 'Brand'
+        },
+        'product_type': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The core type of the product',
+          'title': 'Product Type'
+        },
+        'product_line': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The product line',
+          'title': 'Product Line'
+        },
+        'product_variant': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The product variant',
+          'title': 'Product Variant'
+        },
+        'version_year': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The year of the product version',
+          'title': 'Version Year'
+        },
+        'interest_level': {
+          '$ref': '#/$defs/InterestLevel',
+          'description': 'The level of interest in the product'
+        },
+        'reasoning': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A brief reasoning behind the interest level being detected',
+          'title': 'Reasoning'
+        }
+      },
+      'required': [
+        'sku',
+        'brand',
+        'product_type',
+        'product_line',
+        'product_variant',
+        'version_year',
+        'interest_level',
+        'reasoning'
+      ],
+      'title': 'ProductInterest',
+      'type': 'object'
+    },
+    'ProductRecommendation': {
+      'properties': {
+        'sku': {
+          'description': 'A unique product identifier if available',
+          'title': 'Sku',
+          'type': 'string'
+        },
+        'order': {
+          'anyOf': [
+            {
+              'type': 'integer'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'The order of the recommendation in the list',
+          'title': 'Order'
+        },
+        'reasoning': {
+          'anyOf': [
+            {
+              'type': 'string'
+            },
+            {
+              'type': 'null'
+            }
+          ],
+          'description': 'A brief reasoning behind the recommendation',
+          'title': 'Reasoning'
+        }
+      },
+      'required': [
+        'sku',
+        'order',
+        'reasoning'
+      ],
+      'title': 'ProductRecommendation',
+      'type': 'object'
+    },
+    'Sentiment': {
+      'enum': [
+        'Extremely Positive',
+        'Very Positive',
+        'Positive',
+        'Neutral',
+        'Negative',
+        'Very Negative',
+        'Extremely Negative'
+      ],
+      'title': 'Sentiment',
+      'type': 'string'
+    },
+    'TargetTypes': {
+      'enum': [
+        'Customer',
+        'Spouse',
+        'Child',
+        'Parent',
+        'Grandparent',
+        'Grandchild',
+        'Sibling',
+        'Friend',
+        'Colleague',
+        'Boss',
+        'Employee',
+        'Other'
+      ],
+      'title': 'TargetTypes',
+      'type': 'string'
+    }
+  },
+  'properties': {
+    'focus_product': {
+      'anyOf': [
+        {
+          '$ref': '#/$defs/ProductInScope'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The product sku for the most relevant product, if one has been search.'
+    },
+    'products_in_scope': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/ProductInScope'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The SUKs of all the products that you mention in your latest message.',
+      'title': 'Products In Scope'
+    },
+    'product_interests': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/ProductInterest'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The products that the customer has shown special/explicit interest in.',
+      'title': 'Product Interests'
+    },
+    'product_searches': {
+      'anyOf': [
+        {
+          'items': {
+            'type': 'object'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'All product searches made for the user',
+      'title': 'Product Searches'
+    },
+    'last_product_search': {
+      'anyOf': [
+        {
+          'type': 'object'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The last product search made for the user',
+      'title': 'Last Product Search'
+    },
+    'product_recommendations': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/ProductRecommendation'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The last product search made for the user',
+      'title': 'Product Recommendations'
+    },
+    'interests': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/CustomerInterest'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The interest expressed in the conversation',
+      'title': 'Interests'
+    },
+    'entity_sentiment': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/EntitySentiment'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The sentiment expressed towards named entities in the conversation',
+      'title': 'Entity Sentiment'
+    },
+    'occasions': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/CustomerOccasion'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The occasions described in the conversation',
+      'title': 'Occasions'
+    },
+    'personal_details': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/PersonalDetails'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The personal details volunteered in the conversation',
+      'title': 'Personal Details'
+    },
+    'flags': {
+      'anyOf': [
+        {
+          'items': {
+            '$ref': '#/$defs/ConversationalFlags'
+          },
+          'type': 'array'
+        },
+        {
+          'type': 'null'
+        }
+      ],
+      'description': 'The flags raised during the conversation',
+      'title': 'Flags'
+    }
+  },
+  'required': [
+    'focus_product',
+    'products_in_scope',
+    'product_interests',
+    'product_searches',
+    'last_product_search',
+    'product_recommendations',
+    'interests',
+    'entity_sentiment',
+    'occasions',
+    'personal_details',
+    'flags'
+  ],
+  'title': 'ConversationContext',
+  'type': 'object'
+}

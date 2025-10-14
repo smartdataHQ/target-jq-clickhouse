@@ -33,9 +33,119 @@ from target_clickhouse.utils.ch_df_utils import flatten_nested_fields, remove_al
 from target_clickhouse.utils.json_utils import json_serialize
 from target_clickhouse.utils.persistence import get_clickhouse_connection
 
+from typing import List, Dict, Any
+import json as _json
+from cxs.core.schema.semantic_event import SemanticEventCH
+
+
 
 class ClickhouseSink(SQLSink):
     """clickhouse target sink class."""
+
+    def _transform_with_jq_and_validate_with_pydantic(
+        self,
+        records_serializable: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        jq_expression = semantic_events_jq_expression()
+        self.logger.info(
+            "JQ: compiling and transforming %d input record(s)",
+            len(records_serializable),
+        )
+        try:
+            jq_out = jq.compile(jq_expression).input_value(records_serializable).all()
+        except Exception as ex:
+            self.logger.exception("JQ transform failed: %s", ex)
+            raise
+
+        events: List[Dict[str, Any]] = jq_out[0] if jq_out else []
+        self.logger.info("JQ: produced %d semantic event(s)", len(events))
+
+        def _strip_child_prefix(container: Any, name: str, idx: int) -> Any:
+            """If a nested dict has keys like 'name.something', strip 'name.' → 'something'."""
+            if not isinstance(container, dict):
+                return container
+            prefix = f"{name}."
+            changed = False
+            fixed: Dict[str, Any] = {}
+            for k, v in container.items():
+                if isinstance(k, str) and k.startswith(prefix):
+                    fixed[k[len(prefix):]] = v
+                    changed = True
+                else:
+                    fixed[k] = v
+            if changed:
+                self.logger.info(
+                    "Pydantic[%d] normalized nested keys for '%s' (stripped '%s' prefix).",
+                    idx,
+                    name,
+                    prefix,
+                )
+            return fixed
+
+        validated: List[Dict[str, Any]] = []
+        dropped_count = 0
+
+        for idx, ev in enumerate(events):
+            try:
+                pretty_raw = _json.dumps(ev, indent=2, sort_keys=True, default=str)
+            except Exception:
+                pretty_raw = str(ev)
+            self.logger.info("Pydantic[%d] RAW event:\n%s", idx, pretty_raw)
+
+            ev_norm = dict(ev)
+            for key in ("entity_gid", "event_gid"):
+                val = ev_norm.get(key)
+                if val is None:
+                    continue
+                if isinstance(val, uuid.UUID):
+                    continue
+                try:
+                    ev_norm[key] = uuid.UUID(str(val))
+                except Exception:
+                    ev_norm[key] = uuid.uuid5(uuid.NAMESPACE_URL, str(val))
+
+            for parent in ("analysis", "classification", "involves", "sentiment"):
+                if parent in ev_norm:
+                    ev_norm[parent] = _strip_child_prefix(ev_norm[parent], parent, idx)
+
+            try:
+                model = SemanticEventCH.model_validate(ev_norm)
+                dumped = model.model_dump(mode="python")
+            except Exception as ex:
+                self.logger.error(
+                    "Pydantic[%d] VALIDATION ERROR: %r\nPayload (normalized) was:\n%s",
+                    idx,
+                    ex,
+                    _json.dumps(ev_norm, indent=2, sort_keys=True, default=str),
+                )
+                dropped_count += 1
+                continue
+
+            try:
+                pretty_valid = _json.dumps(dumped, indent=2, sort_keys=True, default=str)
+            except Exception:
+                pretty_valid = str(dumped)
+            self.logger.info("Pydantic[%d] VALIDATED event:\n%s", idx, pretty_valid)
+
+            raw_keys = set(ev_norm.keys())
+            validated_keys = set(dumped.keys())
+            dropped_keys = sorted(raw_keys - validated_keys)
+            if dropped_keys:
+                self.logger.info(
+                    "Pydantic[%d] DROPPED top-level keys: %s",
+                    idx,
+                    ", ".join(dropped_keys),
+                )
+
+            validated.append(dumped)
+
+        self.logger.info(
+            "Pydantic: validated %d/%d event(s); dropped %d invalid",
+            len(validated),
+            len(events),
+            dropped_count,
+        )
+        return validated
 
     connector_class = ClickhouseConnector
 
@@ -86,36 +196,65 @@ class ClickhouseSink(SQLSink):
             True if table exists, False if not, None if unsure or undetectable.
 
         """
-        df = pd.DataFrame(records)
-        df_json = df.to_json(orient="records")
-
-        # Usage
+        df_in = pd.DataFrame(records)
+        df_json = df_in.to_json(orient="records")
         df_json_serialized = json_serialize(df_json)
         records_serializable = json.loads(df_json_serialized)
-
-        jq_expression = semantic_events_jq_expression()
-
-        records_transformed = jq.compile(jq_expression).input_value(records_serializable).all()
-        self.logger.info("records_transformed")
 
         client = get_clickhouse_connection(
             host=self.config.get("host"),
             port=self.config.get("port"),
             username=self.config.get("username"),
             password=self.config.get("password"),
-            database=self.config.get("database")
+            database=self.config.get("database"),
         )
 
-        metadata, items = flatten_nested_fields(client=client, items=records_transformed[0])
+        validated_events = self._transform_with_jq_and_validate_with_pydantic(records_serializable)
+        if not validated_events:
+            self.logger.info("No validated events; nothing to insert.")
+            return 0
+
+        metadata, items = flatten_nested_fields(client=client, items=validated_events)
 
         df = pd.DataFrame(items)
-        df["entity_gid"] = df["entity_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
-        df["event_gid"] = df["event_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
+
+        meta_cols = set(metadata.get("all", {}).keys())
+        df_cols = set(df.columns)
+        extra_cols = sorted(df_cols - meta_cols)
+        if extra_cols:
+            self.logger.warning(
+                "Flatten/metadata mismatch: dropping %d column(s) not in metadata['all']: %s",
+                len(extra_cols),
+                ", ".join(extra_cols),
+            )
+            self.logger.info(
+                "Data sample for dropped columns:\n%s",
+                df[extra_cols].head(5).to_string(index=False),
+            )
+            df = df.drop(columns=extra_cols, errors="ignore")
+
+        if "entity_gid" in df.columns:
+            df["entity_gid"] = df["entity_gid"].apply(
+                lambda x: x if isinstance(x, uuid.UUID) else uuid.UUID(str(x))
+            )
+        if "event_gid" in df.columns:
+            df["event_gid"] = df["event_gid"].apply(
+                lambda x: x if isinstance(x, uuid.UUID) else uuid.UUID(str(x))
+            )
 
         df = remove_all_empty_columns(dataframe=df)
         df = replace_none_where_needed(metadata=metadata, dataframe=df)
-        rows = client.insert_df(df=df, table=f"{self.config.get('database')}.{self.config.get('table_name')}")
+
+        table_fqn = f"{self.config.get('database')}.{self.config.get('table_name')}"
+        self.logger.info(
+            "ClickHouse: inserting %d row(s) into %s; final columns: %s",
+            len(df),
+            table_fqn,
+            ", ".join(df.columns),
+        )
+        rows = client.insert_df(df=df, table=table_fqn)
         written_rows = int(rows.summary["written_rows"])
+        self.logger.info("ClickHouse: wrote %d row(s).", written_rows)
         return written_rows
 
     def activate_version(self, new_version: int) -> None:
