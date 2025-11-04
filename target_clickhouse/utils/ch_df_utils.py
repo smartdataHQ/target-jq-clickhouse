@@ -1,7 +1,7 @@
 import ipaddress
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, List
 
 import numpy as np
 import pandas as pd
@@ -183,6 +183,17 @@ def fetch_metadata(connection: Client, table: str) -> dict[str, Any]:
     }
 
 
+def move_column(self, column: str, move_to: str):
+    if move_to in self.dataframe.columns:
+        self.dataframe[move_to] = self.dataframe.apply(
+            lambda row: self.merge_dic(column, move_to, row), axis=1
+        )
+    else:
+        self.dataframe[move_to] = {column: self.dataframe[column]}
+
+    self.dataframe.drop(column, axis=1, inplace=True)
+
+
 def remove_all_empty_columns(dataframe: pd.DataFrame) -> pd.DataFrame:
     for column in dataframe.columns:
         # find all columns that are completely empty
@@ -193,6 +204,17 @@ def remove_all_empty_columns(dataframe: pd.DataFrame) -> pd.DataFrame:
         elif dataframe[column].apply(lambda x: len(x) if type(x) in [list, dict] else 1).sum() == 0:
             dataframe.drop(column, axis=1, inplace=True)
     return dataframe
+
+
+def generate_gids(gids: List[str], df: pd.DataFrame) -> pd.DataFrame:
+    if gids:
+        for gid_column in gids:
+            if f"{gid_column}_url" in df.columns:
+                df[gid_column] = df[f"{gid_column}_url"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
+            else:
+                df[gid_column] = df[gid_column].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
+    return df
+
 
 def replace_none_where_needed(metadata, dataframe: pd.DataFrame) -> pd.DataFrame:
     null_uuid = uuid.UUID("00000000-0000-0000-0000-000000000000")
@@ -223,8 +245,116 @@ def replace_none_where_needed(metadata, dataframe: pd.DataFrame) -> pd.DataFrame
     return dataframe
 
 
-def flatten_nested_fields(client, items):
-    metadata = fetch_metadata(client, "dev.semantic_events_dev")
+def find_unmapped_columns(metadata, dataframe, move_to: str = "properties") -> pd.DataFrame:
+    # iterate over all columns in the dataframe and check the metadata for ech column
+
+    # create a list of all columns that are not in metadata
+    unmapped_columns = [column for column in dataframe.columns if column not in metadata["all"]]
+
+    if len(unmapped_columns) and move_to is not None:
+        for column in unmapped_columns:
+            move_column(column, move_to)
+
+        # remove all empty properties from the dict in the move_to column
+        dataframe[move_to] = dataframe[move_to].apply(
+            lambda x: {
+                k: v
+                for k, v in x.items()
+                if v is not None
+                   and v != {}
+                   and v != []
+                   and v != ""
+                   and v is not np.nan
+                   and str(v) != "nan"
+            }
+            if isinstance(x, dict)
+            else x
+        )
+
+        if dataframe[move_to].isnull().all():
+            dataframe.drop(move_to, axis=1, inplace=True)
+        else:
+            dataframe[move_to] = dataframe[move_to].apply(lambda x: {} if x is None else x)
+
+    elif len(unmapped_columns):
+        print(f'Found {len(unmapped_columns)} unmapped columns that do not fit the table.')
+        print(f"Dropping them now: {unmapped_columns}.")
+        dataframe.drop(unmapped_columns, axis=1, inplace=True)
+    return dataframe
+
+def apply_type(value, converter, required=False):
+    if value is None:
+        if required:
+            if converter is str:
+                return ""
+            elif converter is float:
+                return 0
+            elif converter is bool:
+                return False
+            else:
+                print(f"EXCEPTION {value} $ {converter}")
+                raise Exception("Value cannot be null")
+        else:
+            if converter == uuid.UUID:
+                return uuid.UUID("00000000-0000-0000-0000-000000000000")
+    else:
+        if type(value) == "nan" or str(value) == "nan":
+            if converter in (float, int, bool):
+                return value
+            elif converter == uuid.UUID:
+                return None
+            return None
+
+        try:
+            if isinstance(converter, tuple) and not isinstance(value, converter[0]):
+                return converter[1](value)
+            elif not isinstance(value, converter):
+                return converter(value)
+        except Exception:
+            return None
+
+    return value
+
+def safe_apply_type(value, converter, required=False, is_map=False):
+    if type(value) in [list, tuple]:
+        return [apply_type(v, converter, required) for v in value]
+    elif isinstance(value, dict) or is_map:
+        if not isinstance(value, dict):
+            # Column is a map but the value is not a dict
+            return {}
+        else:
+            return {k: apply_type(v, converter, required) for k, v in value.items()}
+    elif converter is str:
+        if value and value is np.nan or str(value) == "nan":
+            return None
+        return str(value) if value is not None else None
+    else:
+        return apply_type(value, converter, required)
+
+
+def verify_all_value_types(metadata, dataframe) -> pd.DataFrame:
+    # iterate over all columns in the dataframe and check the metadata for ech column
+
+    for column in dataframe.columns:
+        if column in metadata["all"]:
+            try:
+                column = metadata["all"][column]
+                dataframe[column["name"]] = dataframe[column["name"]].apply(
+                    lambda x: safe_apply_type(x, column["converter"], column["is_req"], column["is_map"])
+                )
+            except Exception as error:
+                print(
+                    f"error {column['name']}, {column['converter']}, {column['is_req']}, {column['is_map']}"
+                )
+                raise error
+        else:
+            print(f"Column {column} not found in metadata")
+            dataframe.drop(column, axis=1, inplace=True)
+    return dataframe
+
+
+def flatten_nested_fields(client, items, database, table_name):
+    metadata = fetch_metadata(client, f"{database}.{table_name}")
     nested = metadata["nested"]
 
     for item in items:

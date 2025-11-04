@@ -46,6 +46,19 @@ class TargetClickhouse(SQLTarget):
             secret=True,
         ),
         th.Property(
+            "target_module",
+            th.StringType,
+            required=False,
+            description="Target module",
+            default="default",
+        ),
+        th.Property(
+            "generate_gids",
+            th.ArrayType(th.StringType),
+            required=False,
+            description="List of columns to generate uuid",
+        ),
+        th.Property(
             "host",
             th.StringType,
             required=False,
@@ -144,7 +157,7 @@ class TargetClickhouse(SQLTarget):
             required=False,
             description="List of columns to order by. Used for engines that require "
                         "ordering.",
-        ),
+        )
     ).to_dict()
 
     default_sink_class = ClickhouseSink

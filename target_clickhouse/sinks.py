@@ -9,6 +9,7 @@ from typing import Any, Iterable
 import jsonschema.exceptions as jsonschema_exceptions
 import pandas as pd
 import requests
+import importlib
 import simplejson as json
 import sqlalchemy
 from pendulum import now
@@ -26,10 +27,14 @@ from singer_sdk.sinks import SQLSink
 from sqlalchemy.sql.expression import bindparam
 
 import jq
-from target_clickhouse.semantic_events_jq import semantic_events_jq_expression
 from target_clickhouse.connectors import ClickhouseConnector
-from target_clickhouse.utils.ch_df_utils import flatten_nested_fields, remove_all_empty_columns, \
-    replace_none_where_needed
+from target_clickhouse.utils.ch_df_utils import (
+    find_unmapped_columns,
+    flatten_nested_fields,
+    remove_all_empty_columns,
+    replace_none_where_needed,
+    verify_all_value_types, generate_gids
+)
 from target_clickhouse.utils.json_utils import json_serialize
 from target_clickhouse.utils.persistence import get_clickhouse_connection
 
@@ -93,11 +98,16 @@ class ClickhouseSink(SQLSink):
         df_json_serialized = json_serialize(df_json)
         records_serializable = json.loads(df_json_serialized)
 
-        jq_expression = semantic_events_jq_expression()
+        module_name = f"target_clickhouse.transformations.{self.config.get('database')}.{self.config.get('table_name')}.{self.config.get('target_module')}.jq_transform"
+        class_name = "jq_transform"
 
-        records_transformed = jq.compile(jq_expression).input_value(records_serializable).all()
-        self.logger.info("records_transformed")
+        module = importlib.import_module(module_name)
+        jq_module = getattr(module, class_name)
 
+        jq_query = jq_module()
+
+        records_transformed = jq.compile(jq_query).input_value(records_serializable).all()
+        
         client = get_clickhouse_connection(
             host=self.config.get("host"),
             port=self.config.get("port"),
@@ -106,16 +116,26 @@ class ClickhouseSink(SQLSink):
             database=self.config.get("database")
         )
 
-        metadata, items = flatten_nested_fields(client=client, items=records_transformed[0])
+        metadata, items = flatten_nested_fields(
+            client=client, 
+            items=records_transformed, 
+            database=self.config.get('database'), 
+            table_name=self.config.get('table_name')
+        )
 
         df = pd.DataFrame(items)
-        df["entity_gid"] = df["entity_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
-        df["event_gid"] = df["event_gid"].apply(lambda x: uuid.uuid5(uuid.NAMESPACE_URL, str(x)))
 
+        gids = self.config.get('generate_gids')
+
+        df = generate_gids(gids=gids, df=df)
         df = remove_all_empty_columns(dataframe=df)
+        df = find_unmapped_columns(metadata=metadata, dataframe=df)
+        df = verify_all_value_types(metadata=metadata, dataframe=df)
         df = replace_none_where_needed(metadata=metadata, dataframe=df)
+
         rows = client.insert_df(df=df, table=f"{self.config.get('database')}.{self.config.get('table_name')}")
         written_rows = int(rows.summary["written_rows"])
+
         return written_rows
 
     def activate_version(self, new_version: int) -> None:
