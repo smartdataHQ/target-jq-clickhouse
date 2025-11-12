@@ -98,7 +98,7 @@ class ClickhouseSink(SQLSink):
         df_json_serialized = json_serialize(df_json)
         records_serializable = json.loads(df_json_serialized)
 
-        module_name = f"target_clickhouse.transformations.{self.config.get('database')}.{self.config.get('table_name')}.{self.config.get('target_module')}.jq_transform"
+        module_name = f"target_clickhouse.transformations.{self.config.get('target_module')}.jq_transform"
         class_name = "jq_transform"
 
         module = importlib.import_module(module_name)
