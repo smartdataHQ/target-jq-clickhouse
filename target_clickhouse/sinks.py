@@ -129,7 +129,6 @@ class ClickhouseSink(SQLSink):
 
         df = generate_gids(gids=gids, df=df)
         df = remove_all_empty_columns(dataframe=df)
-        df = find_unmapped_columns(metadata=metadata, dataframe=df)
         df = verify_all_value_types(metadata=metadata, dataframe=df)
         df = replace_none_where_needed(metadata=metadata, dataframe=df)
 

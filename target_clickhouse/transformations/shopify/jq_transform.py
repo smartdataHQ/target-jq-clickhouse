@@ -1,6 +1,6 @@
 def jq_transform() -> str:
     return r"""
-[.[] |
+.[] |
  { 
   entity_gid: ("https://shopify.com/orders"),
   type: ("track" | tostring),
@@ -96,5 +96,4 @@ def jq_transform() -> str:
   partition: ("shopify.com" | tostring),
   sign: ("1" | tonumber)
  }
-]
 """
