@@ -1,5 +1,5 @@
-def semantic_events_jq_expression() -> str:
-    return """
+def jq_transform() -> str:
+    return r"""
 [.[] |
  { 
   entity_gid: ("https://shopify.com/orders"),
